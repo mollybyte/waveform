@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/alina0x/waveform/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/alina0x/waveform/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
+  <a href="https://github.com/mollybyte/waveform/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mollybyte/waveform/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.41-02569B?logo=flutter&logoColor=white" />
   <img alt="Dart" src="https://img.shields.io/badge/Dart-3.11-0175C2?logo=dart&logoColor=white" />
   <img alt="Riverpod" src="https://img.shields.io/badge/Riverpod-3.3-2c3e50" />
@@ -141,7 +141,7 @@ Pre-built binaries are attached to every GitHub release. Preview/test builds and
 update news are posted to the Telegram channel — **[t.me/waveformsc](https://t.me/waveformsc)**.
 
 ### macOS
-1. Download `waveform-macos-vX.Y.Z.dmg` from the [latest release](https://github.com/alina0x/waveform/releases/latest).
+1. Download `waveform-macos-vX.Y.Z.dmg` from the [latest release](https://github.com/mollybyte/waveform/releases/latest).
 2. Open the DMG and drag `Waveform` to your `Applications` folder.
 3. Double-click. The app is signed with Apple Developer ID and notarized, so it opens without Gatekeeper prompts.
 
@@ -316,7 +316,7 @@ git tag v0.2.0
 git push --tags
 ```
 
-GitHub Actions runs `release.yml`: parallel macOS / Windows / Linux builds, signs and notarizes the macOS `.app`, packs everything into a release, and publishes at `https://github.com/alina0x/waveform/releases/tag/v0.2.0`. Notes come from `.github/release_template.md`.
+GitHub Actions runs `release.yml`: parallel macOS / Windows / Linux builds, signs and notarizes the macOS `.app`, packs everything into a release, and publishes at `https://github.com/mollybyte/waveform/releases/tag/v0.2.0`. Notes come from `.github/release_template.md`.
 
 If the macOS job fails at codesign or notarytool, check `gh run view --log-failed <id>` and validate the secrets are present + the `.p12` is exportable on a fresh machine.
 
