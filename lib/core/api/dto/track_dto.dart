@@ -8,12 +8,19 @@ class TranscodingDto {
     required this.preset,
     required this.protocol,
     required this.mimeType,
+    this.snipped = false,
   });
 
   final String url;
   final String preset; // mp3_0_0 / opus_0_0 / aac_...
   final String protocol; // hls / progressive
   final String mimeType;
+
+  /// Превью-сниппет (~30с) вместо полного трека — так api-v2 отдаёт треки,
+  /// недоступные в регионе, и бесплатную часть GO+. Играть его как трек нельзя:
+  /// источник кончается задолго до `full_duration`, и completion-гейт плеера
+  /// принимал это за ложный конец → плеер замирал.
+  final bool snipped;
 
   bool get isHls => protocol == 'hls';
 
@@ -30,6 +37,7 @@ class TranscodingDto {
       preset: asStr(j['preset']),
       protocol: asStr(format['protocol']),
       mimeType: asStr(format['mime_type']),
+      snipped: asBool(j['snipped'], false),
     );
   }
 }
@@ -92,6 +100,15 @@ class TrackDto {
       policy == 'SNIP' ||
       monetizationModel == 'SUB_HIGH_TIER' ||
       transcodings.any((t) => t.isEncrypted);
+
+  /// Полный поток трека недоступен (заблокирован в регионе / правообладателем):
+  /// `policy == 'BLOCK'` или все незашифрованные источники — лишь сниппеты.
+  /// GO+ сюда не относим — у него своя причина ([isGoPlus]).
+  bool get isBlocked =>
+      !isGoPlus &&
+      (policy == 'BLOCK' ||
+          (transcodings.isNotEmpty &&
+              transcodings.every((t) => t.snipped || t.isEncrypted)));
 
   factory TrackDto.fromJson(Map<String, dynamic> j) {
     final media = asMap(j['media']);

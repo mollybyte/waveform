@@ -130,22 +130,68 @@ void main() {
   ]}
 }''';
       final t = TrackDto.fromJson(jsonDecode(json)).toDomain();
-      expect(t.streamCandidates,
-          ['https://x/stream/hls', 'https://x/stream/progressive']);
+      expect(t.streamCandidates, [
+        'https://x/stream/hls',
+        'https://x/stream/progressive',
+      ]);
       // Наличие зашифрованного транскодинга само по себе → GO+ (даже без
       // policy/monetization, которых нет в выдаче search/stream).
       expect(t.goPlus, true);
     });
 
+    test('region-blocked: snippet-only track has no candidates', () {
+      const json = '''
+{
+  "id": 2, "title": "blocked", "duration": 30000, "full_duration": 240000,
+  "policy": "BLOCK",
+  "user": {"id": 1, "username": "u", "permalink": "u"},
+  "media": {"transcodings": [
+    {"url": "https://x/preview/hls", "preset": "mp3_0_0", "snipped": true,
+     "format": {"protocol": "hls", "mime_type": "audio/mpeg"}},
+    {"url": "https://x/preview/progressive", "preset": "mp3_0_0",
+     "snipped": true,
+     "format": {"protocol": "progressive", "mime_type": "audio/mpeg"}}
+  ]}
+}''';
+      final t = TrackDto.fromJson(jsonDecode(json)).toDomain();
+      expect(t.streamCandidates, isEmpty);
+      expect(t.blocked, true);
+      expect(t.goPlus, false);
+    });
+
+    test('snipped transcodings are never candidates', () {
+      final t = TrackDto.fromJson({
+        'id': 3,
+        'title': 't',
+        'duration': 1000,
+        'user': {'id': 1, 'username': 'u', 'permalink': 'u'},
+        'media': {
+          'transcodings': [
+            {
+              'url': 'https://x/preview',
+              'snipped': true,
+              'format': {'protocol': 'hls'},
+            },
+            {
+              'url': 'https://x/full',
+              'format': {'protocol': 'hls'},
+            },
+          ],
+        },
+      }).toDomain();
+      expect(t.streamCandidates, ['https://x/full']);
+      expect(t.blocked, false);
+    });
+
     test('flags GO+ tracks (SNIP / SUB_HIGH_TIER) as goPlus', () {
       Track parse(String policy, String mon) => TrackDto.fromJson({
-            'id': 1,
-            'title': 't',
-            'duration': 1000,
-            'user': {'id': 1, 'username': 'u', 'permalink': 'u'},
-            'policy': policy,
-            'monetization_model': mon,
-          }).toDomain();
+        'id': 1,
+        'title': 't',
+        'duration': 1000,
+        'user': {'id': 1, 'username': 'u', 'permalink': 'u'},
+        'policy': policy,
+        'monetization_model': mon,
+      }).toDomain();
       expect(parse('ALLOW', 'AD_SUPPORTED').goPlus, false);
       expect(parse('SNIP', 'SUB_HIGH_TIER').goPlus, true);
       expect(parse('ALLOW', 'SUB_HIGH_TIER').goPlus, true);
@@ -188,35 +234,41 @@ void main() {
 
   group('publisher_metadata.artist', () {
     test('publisher_metadata.artist overrides uploader username', () {
-      final json = jsonDecode('''
+      final json =
+          jsonDecode('''
   {
     "id": 1, "title": "T", "duration": 1000, "full_duration": 1000,
     "permalink_url": "https://soundcloud.com/up/t",
     "user": {"id": 7, "username": "uploader_acct", "permalink": "uploader_acct"},
     "publisher_metadata": {"artist": "Real Artist Name"}
-  }''') as Map<String, dynamic>;
+  }''')
+              as Map<String, dynamic>;
       final track = TrackDto.fromJson(json).toDomain();
-      expect(track.artist, 'Real Artist Name');      // display = metadata
+      expect(track.artist, 'Real Artist Name'); // display = metadata
       expect(track.artistPermalink, 'uploader_acct'); // link = uploader
     });
 
     test('falls back to username when publisher artist absent/blank', () {
-      final json = jsonDecode('''
+      final json =
+          jsonDecode('''
   {
     "id": 2, "title": "T2", "duration": 1000,
     "user": {"id": 8, "username": "soloacct", "permalink": "soloacct"},
     "publisher_metadata": {"artist": "  "}
-  }''') as Map<String, dynamic>;
+  }''')
+              as Map<String, dynamic>;
       final track = TrackDto.fromJson(json).toDomain();
       expect(track.artist, 'soloacct');
     });
 
     test('no publisher_metadata at all falls back to username', () {
-      final json = jsonDecode('''
+      final json =
+          jsonDecode('''
   {
     "id": 3, "title": "T3", "duration": 1000,
     "user": {"id": 9, "username": "plainacct", "permalink": "plainacct"}
-  }''') as Map<String, dynamic>;
+  }''')
+              as Map<String, dynamic>;
       final track = TrackDto.fromJson(json).toDomain();
       expect(track.artist, 'plainacct');
     });

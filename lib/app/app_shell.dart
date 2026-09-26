@@ -159,6 +159,8 @@ class _AppShellState extends ConsumerState<AppShell> {
       if (next == null || next.seq == prev?.seq) return;
       final msg = next.goPlus
           ? '“${next.title}” is GO+ only — can’t play without a subscription'
+          : next.blocked
+          ? '“${next.title}” isn’t available in your region — skipped'
           : '“${next.title}” is unavailable — skipped';
       showToast(context, msg, duration: const Duration(seconds: 3));
     });
@@ -424,8 +426,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   KeyEventResult _handleChordKey(KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final kb = HardwareKeyboard.instance;
-    final hasMod =
-        kb.isMetaPressed || kb.isControlPressed || kb.isAltPressed;
+    final hasMod = kb.isMetaPressed || kb.isControlPressed || kb.isAltPressed;
     // Help-оверлей (клавиша H) открыт: H или Esc его закрывают. Его собственный
     // autofocus-Focus проигрывает уже сфокусированному _shellFocus и не получает
     // событие, поэтому закрываем здесь — гарантированно. Остальные клавиши
@@ -453,7 +454,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         _goChord(target);
         return KeyEventResult.handled;
       }
-      return KeyEventResult.handled; // отменённый аккорд глотает клавишу (как web SC)
+      return KeyEventResult
+          .handled; // отменённый аккорд глотает клавишу (как web SC)
     }
     if (event.logicalKey == LogicalKeyboardKey.keyG) {
       _chord.arm();
@@ -502,7 +504,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
     url ??= ref.read(playerControllerProvider).track?.permalinkUrl;
     if (url == null || url.isEmpty) {
-      showToast(context, 'nothing to copy', duration: const Duration(seconds: 2));
+      showToast(
+        context,
+        'nothing to copy',
+        duration: const Duration(seconds: 2),
+      );
       return;
     }
     copyToClipboard(context, url, message: 'link copied', ref: ref);
