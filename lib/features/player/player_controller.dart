@@ -14,7 +14,7 @@ import '../../shared/models/track.dart';
 
 /// Событие «трек не проигрался» — для всплывающего уведомления в UI.
 /// [seq] растёт с каждым событием, чтобы listener срабатывал и на повтор.
-typedef Unplayable = ({int seq, String title, bool goPlus});
+typedef Unplayable = ({int seq, String title, bool goPlus, bool blocked});
 
 /// Состояние плеера. Прогресс/признак «играет» приходят из [AudioEngine]
 /// (just_audio); очередь next/previous — реальный список с экрана.
@@ -184,7 +184,19 @@ class PlayerController extends Notifier<PlayerState> {
         final reachedEnd = dur > 0
             ? _maxPosMs >= dur * 0.7
             : since.inSeconds > 5;
-        if (since.inSeconds < 5 || !reachedEnd) return;
+        if (since.inSeconds < 5) return;
+        if (!reachedEnd) {
+          // Источник кончился сильно раньше метаданных (превью-сниппет
+          // заблокированного трека, обрезанный стрим). Раньше тут был return —
+          // и плеер навсегда замирал на конце превью. Идём дальше; от
+          // skip-storm'а защищает гейт 5с выше.
+          ref
+              .read(talkerProvider)
+              .warning(
+                'source ended early (${_maxPosMs}ms of ${dur}ms): '
+                '${state.track?.title}',
+              );
+        }
         if (state.repeat) {
           _engine.seek(Duration.zero);
           _engine.resume();
@@ -363,10 +375,14 @@ class PlayerController extends Notifier<PlayerState> {
     // Нет незашифрованных источников: GO+ → сообщаем причину; иначе мок/не
     // streamable — тихо (UI оптимистичен, реальный «играет» придёт из движка).
     if (candidates.isEmpty) {
-      if (track.goPlus) {
+      if (track.goPlus || track.blocked) {
         ref
             .read(talkerProvider)
-            .warning('GO+ only (subscription): ${track.title}');
+            .warning(
+              track.goPlus
+                  ? 'GO+ only (subscription): ${track.title}'
+                  : 'blocked (region/rights): ${track.title}',
+            );
         _markUnplayable(token, track);
       }
       return;
@@ -415,6 +431,7 @@ class PlayerController extends Notifier<PlayerState> {
         seq: ++_unplayableSeq,
         title: track.title,
         goPlus: track.goPlus,
+        blocked: track.blocked,
       ),
     );
     if (_queue.length > 1 && ++_deadStreak < _maxDeadSkips) {
@@ -434,7 +451,7 @@ class PlayerController extends Notifier<PlayerState> {
   Future<void> _preloadAfter(Track current) async {
     final token = ++_preloadToken;
     final n = _upNext;
-    if (n == null || n.streamCandidates.isEmpty || n.goPlus) {
+    if (n == null || n.streamCandidates.isEmpty || n.goPlus || n.blocked) {
       await _engine.preloadNext(null);
       return;
     }

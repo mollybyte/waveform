@@ -18,6 +18,7 @@ class Track {
     this.streamCandidates = const [],
     this.permalinkUrl,
     this.goPlus = false,
+    this.blocked = false,
     this.minted = false,
     this.genre = 'electronic',
     this.postedAt = '3 days ago',
@@ -73,6 +74,10 @@ class Track {
   /// наш клиент его не проигрывает — помечаем как unplayable с причиной.
   final bool goPlus;
 
+  /// Полный поток недоступен (регион/правообладатель) — есть только превью.
+  /// Плеер сразу помечает такой трек непроигрываемым и идёт дальше.
+  final bool blocked;
+
   /// web3-маркер: трек заминчен как NFT.
   final bool minted;
 
@@ -93,6 +98,7 @@ class Track {
     streamCandidates: streamCandidates,
     permalinkUrl: permalinkUrl,
     goPlus: goPlus,
+    blocked: blocked,
     minted: minted ?? this.minted,
     genre: genre,
     postedAt: postedAt,

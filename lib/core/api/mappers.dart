@@ -50,13 +50,17 @@ extension TrackDtoMapper on TrackDto {
     permalinkUrl: permalinkUrl,
     // HLS-кандидаты сначала, progressive — как фолбэк (часть HLS-ссылок 404).
     // Зашифрованные (DRM) транскодинги исключаем — just_audio их не играет.
-    streamCandidates: [
-      for (final t in transcodings)
-        if (t.isHls && !t.isEncrypted) t.url,
-      for (final t in transcodings)
-        if (!t.isHls && !t.isEncrypted) t.url,
-    ],
+    // Сниппеты (превью ~30с) тоже: полный трек из них не сыграть.
+    streamCandidates: isBlocked
+        ? const []
+        : [
+            for (final t in transcodings)
+              if (t.isHls && !t.isEncrypted && !t.snipped) t.url,
+            for (final t in transcodings)
+              if (!t.isHls && !t.isEncrypted && !t.snipped) t.url,
+          ],
     goPlus: isGoPlus,
+    blocked: isBlocked,
     genre: (genre == null || genre!.isEmpty) ? 'electronic' : genre!,
     postedAt: relativeTime(createdAt),
     description: description ?? '',
